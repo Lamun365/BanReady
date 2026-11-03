@@ -28,11 +28,14 @@ from backend.app.services.time_engine import (
 
 from backend.app.models.prototype_analytics import (
     ModeledStreetRequest,
+    ModeledZoneRequest,
 )
 
 from backend.app.services.prototype_analytics_engine import (
     build_modeled_street_analytics,
+    build_modeled_zone_analytics,
 )
+
 
 
 # ============================================================
@@ -245,6 +248,8 @@ def root():
             "/health",
             "/parking/check",
             "/parking/options",
+            "/parking/modeled-street",
+            "/parking/modeled-zone",
         ],
     }
 
@@ -524,4 +529,46 @@ def modeled_street(
             request.restricted_side
         ),
         ban_type=request.ban_type,
+    )
+
+# ============================================================
+# Modeled parking-zone analytics endpoint
+# ============================================================
+
+@app.post("/parking/modeled-zone")
+def modeled_zone(
+    request: ModeledZoneRequest,
+):
+    """
+    Return nearby Worcester streets with modeled
+    parking analytics.
+
+    Real data:
+    - Worcester street names
+    - segment IDs
+    - winter-ban types
+    - restricted sides
+    - straight-line distances
+
+    Prototype data:
+    - legal-space estimates
+    - expected vehicle counts
+    - request counts
+    - parking-chance percentages
+
+    This endpoint does not provide live parking
+    availability or calculated walking routes.
+    """
+
+    return build_modeled_zone_analytics(
+        latitude=request.latitude,
+        longitude=request.longitude,
+        origin_segment_id=(
+            request.origin_segment_id
+        ),
+        radius_meters=(
+            request.radius_meters
+        ),
+        limit=request.limit,
+        parking_segments=PARKING_FEATURES,
     )

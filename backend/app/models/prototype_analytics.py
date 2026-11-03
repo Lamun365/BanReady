@@ -11,8 +11,15 @@ class ModeledStreetRequest(BaseModel):
 
 
 class ModeledZoneRequest(BaseModel):
-    latitude: float
-    longitude: float
+    latitude: float = Field(
+        ge=-90,
+        le=90,
+    )
+
+    longitude: float = Field(
+        ge=-180,
+        le=180,
+    )
 
     origin_segment_id: int | None = None
 
@@ -27,6 +34,7 @@ class ModeledZoneRequest(BaseModel):
         ge=1,
         le=10,
     )
+
 
 
 class ModeledWalkingZonesRequest(BaseModel):
