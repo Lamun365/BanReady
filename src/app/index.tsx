@@ -1,98 +1,145 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from "expo-router";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
+  function handleManualLocation() {
+    router.push("/location");
+  }
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.logo}>❄️</Text>
+        <Text style={styles.title}>BanReady</Text>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+        <Text style={styles.subtitle}>
+          Know where to move your car before the snow ban.
+        </Text>
+      </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>
+          Where is your car?
+        </Text>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        <Text style={styles.description}>
+          For initial testing, choose a Worcester parking
+          location manually.
+        </Text>
+
+        <Pressable
+          style={styles.primaryButton}
+          onPress={handleManualLocation}
+        >
+          <Text style={styles.primaryButtonText}>
+            Choose Worcester Location
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.testBadge}>
+        <Text style={styles.testBadgeText}>
+          TEST MODE
+        </Text>
+      </View>
+
+      <Text style={styles.footer}>
+        Worcester Snow Parking Prototype
+      </Text>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    backgroundColor: "#F5F7FA",
+    padding: 24,
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+
+  header: {
+    marginTop: 50,
+    marginBottom: 40,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+
+  logo: {
+    fontSize: 48,
+    marginBottom: 12,
   },
+
   title: {
-    textAlign: 'center',
+    fontSize: 38,
+    fontWeight: "800",
+    color: "#12223B",
   },
-  code: {
-    textTransform: 'uppercase',
+
+  subtitle: {
+    marginTop: 12,
+    fontSize: 17,
+    lineHeight: 25,
+    color: "#667085",
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+
+  card: {
+    backgroundColor: "#FFFFFF",
+    padding: 24,
+    borderRadius: 24,
+  },
+
+  cardTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#12223B",
+  },
+
+  description: {
+    marginTop: 10,
+    marginBottom: 24,
+    fontSize: 16,
+    lineHeight: 23,
+    color: "#667085",
+  },
+
+  primaryButton: {
+    backgroundColor: "#1769E0",
+    paddingVertical: 17,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  testBadge: {
+    marginTop: 24,
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: "#FFF3D6",
+    borderRadius: 20,
+  },
+
+  testBadgeText: {
+    color: "#965C00",
+    fontWeight: "700",
+    fontSize: 12,
+  },
+
+  footer: {
+    marginTop: 10,
+    color: "#98A2B3",
+    fontSize: 13,
   },
 });
