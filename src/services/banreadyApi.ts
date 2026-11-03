@@ -1,4 +1,5 @@
-const API_BASE_URL = "https://smock-suggest-vagabond.ngrok-free.dev";
+// const API_BASE_URL = "https://smock-suggest-vagabond.ngrok-free.dev";
+const API_BASE_URL = "https://banready.onrender.com";
 
 
 export type ParkingCheckRequest = {
