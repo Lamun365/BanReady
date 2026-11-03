@@ -38,7 +38,10 @@
         {
           "locationWhenInUsePermission": "BanReady uses your location to check the winter parking rule where your car is parked."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
