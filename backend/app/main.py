@@ -26,6 +26,14 @@ from backend.app.services.time_engine import (
     to_worcester_time,
 )
 
+from backend.app.models.prototype_analytics import (
+    ModeledStreetRequest,
+)
+
+from backend.app.services.prototype_analytics_engine import (
+    build_modeled_street_analytics,
+)
+
 
 # ============================================================
 # Data locations
@@ -493,3 +501,27 @@ def parking_options(
     )
 
     return result.to_dict()
+
+@app.post("/parking/modeled-street")
+def modeled_street(
+    request: ModeledStreetRequest,
+):
+    """
+    Return location-responsive prototype analytics.
+
+    Street, side, ban type, and segment ID come
+    from BanReady's real parking-check result.
+
+    Supply, demand, request, and chance values are
+    deterministic synthetic prototype values.
+    """
+
+    return build_modeled_street_analytics(
+        street_name=request.street_name,
+        segment_id=request.segment_id,
+        parked_side=request.parked_side,
+        restricted_side=(
+            request.restricted_side
+        ),
+        ban_type=request.ban_type,
+    )
