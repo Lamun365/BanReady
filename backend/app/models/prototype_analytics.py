@@ -1,4 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+)
 
 
 class ModeledStreetRequest(BaseModel):
@@ -36,10 +40,16 @@ class ModeledZoneRequest(BaseModel):
     )
 
 
-
 class ModeledWalkingZonesRequest(BaseModel):
-    latitude: float
-    longitude: float
+    latitude: float = Field(
+        ge=-90,
+        le=90,
+    )
+
+    longitude: float = Field(
+        ge=-180,
+        le=180,
+    )
 
     origin_segment_id: int | None = None
 
@@ -49,3 +59,32 @@ class ModeledWalkingZonesRequest(BaseModel):
             800,
         ]
     )
+
+    @field_validator(
+        "radii_meters"
+    )
+    @classmethod
+    def validate_radii(
+        cls,
+        values: list[int],
+    ) -> list[int]:
+        if not values:
+            raise ValueError(
+                "At least one radius is required."
+            )
+
+        cleaned_values = sorted(
+            set(values)
+        )
+
+        if any(
+            value < 100
+            or value > 5000
+            for value in cleaned_values
+        ):
+            raise ValueError(
+                "Each radius must be between "
+                "100 and 5000 meters."
+            )
+
+        return cleaned_values

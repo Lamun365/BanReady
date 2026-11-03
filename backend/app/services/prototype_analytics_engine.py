@@ -1,5 +1,12 @@
 from __future__ import annotations
-from math import cos, hypot, radians
+from math import (
+    asin,
+    cos,
+    hypot,
+    radians,
+    sin,
+    sqrt,
+)
 
 import hashlib
 from typing import Any
@@ -414,6 +421,31 @@ def extract_restricted_side(
         str(value)
     )
 
+def extract_ban_type(
+    feature: dict[str, Any],
+) -> str:
+    properties = feature_properties(
+        feature
+    )
+
+    value = get_first_value(
+        properties,
+        (
+            "ban_type",
+            "BAN_TYPE",
+            "type",
+            "TYPE",
+        ),
+        "UNKNOWN",
+    )
+
+    return (
+        str(value)
+        .strip()
+        .upper()
+        or "UNKNOWN"
+    )
+
 
 def extract_geometry(
     feature: dict[str, Any],
@@ -667,11 +699,8 @@ def distance_to_feature_meters(
 def approximate_minutes_from_distance(
     distance_meters: float,
 ) -> int:
-    """
-    Approximate time using 80 meters per minute.
-
-    This is not pedestrian routing.
-    """
+    if distance_meters <= 20:
+        return 0
 
     return max(
         1,
@@ -954,20 +983,218 @@ def build_modeled_zone_analytics(
         ),
     }
 
-def extract_ban_type(
-    feature: dict[str, Any],
+def haversine_meters(
+    latitude_1: float,
+    longitude_1: float,
+    latitude_2: float,
+    longitude_2: float,
+) -> float:
+    """
+    Calculate straight-line distance between
+    two latitude/longitude points.
+    """
+
+    earth_radius_meters = 6_371_000.0
+
+    latitude_1_radians = radians(
+        latitude_1
+    )
+
+    latitude_2_radians = radians(
+        latitude_2
+    )
+
+    latitude_delta = radians(
+        latitude_2 - latitude_1
+    )
+
+    longitude_delta = radians(
+        longitude_2 - longitude_1
+    )
+
+    haversine_value = (
+        sin(
+            latitude_delta / 2
+        ) ** 2
+        + cos(
+            latitude_1_radians
+        )
+        * cos(
+            latitude_2_radians
+        )
+        * sin(
+            longitude_delta / 2
+        ) ** 2
+    )
+
+    return (
+        2
+        * earth_radius_meters
+        * asin(
+            sqrt(
+                haversine_value
+            )
+        )
+    )
+
+
+def destination_properties(
+    destination: dict[str, Any],
+) -> dict[str, Any]:
+    properties = destination.get(
+        "properties"
+    )
+
+    if isinstance(
+        properties,
+        dict,
+    ):
+        return properties
+
+    return destination
+
+
+def extract_destination_name(
+    destination: dict[str, Any],
 ) -> str:
-    properties = feature_properties(
-        feature
+    properties = (
+        destination_properties(
+            destination
+        )
     )
 
     value = get_first_value(
         properties,
         (
-            "ban_type",
-            "BAN_TYPE",
-            "type",
-            "TYPE",
+            "name",
+            "parking_name",
+            "facility_name",
+            "Parking Facility Name",
+        ),
+        "Unnamed parking facility",
+    )
+
+    return str(value).strip()
+
+
+def extract_destination_id(
+    destination: dict[str, Any],
+) -> str | None:
+    properties = (
+        destination_properties(
+            destination
+        )
+    )
+
+    value = get_first_value(
+        properties,
+        (
+            "parking_id",
+            "id",
+            "PARKING_PARKING_ID",
+            "destination_id",
+        ),
+    )
+
+    if value is None:
+        return None
+
+    return str(value)
+
+
+def extract_destination_coordinates(
+    destination: dict[str, Any],
+) -> tuple[float, float] | None:
+    """
+    Support either GeoJSON Point geometry or
+    latitude/longitude property fields.
+    """
+
+    geometry = destination.get(
+        "geometry"
+    )
+
+    if isinstance(
+        geometry,
+        dict,
+    ):
+        coordinates = geometry.get(
+            "coordinates"
+        )
+
+        if (
+            geometry.get("type") == "Point"
+            and isinstance(
+                coordinates,
+                list,
+            )
+            and len(coordinates) >= 2
+        ):
+            return (
+                float(coordinates[1]),
+                float(coordinates[0]),
+            )
+
+    properties = (
+        destination_properties(
+            destination
+        )
+    )
+
+    latitude = get_first_value(
+        properties,
+        (
+            "latitude",
+            "lat",
+            "Latitude",
+            "LATITUDE",
+        ),
+    )
+
+    longitude = get_first_value(
+        properties,
+        (
+            "longitude",
+            "lon",
+            "lng",
+            "Longitude",
+            "LONGITUDE",
+        ),
+    )
+
+    if (
+        latitude is None
+        or longitude is None
+    ):
+        return None
+
+    try:
+        return (
+            float(latitude),
+            float(longitude),
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+
+def extract_availability_status(
+    destination: dict[str, Any],
+) -> str:
+    properties = (
+        destination_properties(
+            destination
+        )
+    )
+
+    value = get_first_value(
+        properties,
+        (
+            "availability_status",
+            "availability",
         ),
         "UNKNOWN",
     )
@@ -978,3 +1205,271 @@ def extract_ban_type(
         .upper()
         or "UNKNOWN"
     )
+
+
+def build_destination_distance_item(
+    *,
+    destination: dict[str, Any],
+    origin_latitude: float,
+    origin_longitude: float,
+) -> dict[str, Any] | None:
+    coordinates = (
+        extract_destination_coordinates(
+            destination
+        )
+    )
+
+    if coordinates is None:
+        return None
+
+    latitude, longitude = coordinates
+
+    distance_meters = (
+        haversine_meters(
+            origin_latitude,
+            origin_longitude,
+            latitude,
+            longitude,
+        )
+    )
+
+    return {
+        "parking_id": (
+            extract_destination_id(
+                destination
+            )
+        ),
+        "name": (
+            extract_destination_name(
+                destination
+            )
+        ),
+        "latitude": latitude,
+        "longitude": longitude,
+        "distance_meters": round(
+            distance_meters,
+            2,
+        ),
+        "distance_km": round(
+            distance_meters / 1000,
+            2,
+        ),
+        "approximate_minutes": (
+            approximate_minutes_from_distance(
+                distance_meters
+            )
+        ),
+        "availability_status": (
+            extract_availability_status(
+                destination
+            )
+        ),
+    }
+
+def collect_unique_legal_streets(
+    *,
+    latitude: float,
+    longitude: float,
+    radius_meters: float,
+    parking_segments: list[
+        dict[str, Any]
+    ],
+) -> list[dict[str, Any]]:
+    """
+    Find unique applicable Worcester streets
+    within the specified straight-line radius.
+    """
+
+    candidates: list[
+        dict[str, Any]
+    ] = []
+
+    for feature in parking_segments:
+        distance = (
+            distance_to_feature_meters(
+                latitude=latitude,
+                longitude=longitude,
+                feature=feature,
+            )
+        )
+
+        if (
+            distance is None
+            or distance > radius_meters
+        ):
+            continue
+
+        item = build_zone_street_item(
+            feature=feature,
+            distance_meters=distance,
+        )
+
+        if item is not None:
+            candidates.append(
+                item
+            )
+
+    candidates.sort(
+        key=lambda item: (
+            item["distance_meters"],
+            item["street_name"],
+        )
+    )
+
+    unique_streets: list[
+        dict[str, Any]
+    ] = []
+
+    seen_names: set[str] = set()
+
+    for item in candidates:
+        street_name = (
+            normalize_street_name(
+                item["street_name"]
+            )
+        )
+
+        if street_name in seen_names:
+            continue
+
+        seen_names.add(
+            street_name
+        )
+
+        unique_streets.append(
+            item
+        )
+
+    return unique_streets
+
+def build_modeled_walking_zones(
+    *,
+    latitude: float,
+    longitude: float,
+    origin_segment_id: int | None,
+    radii_meters: list[int],
+    parking_segments: list[
+        dict[str, Any]
+    ],
+    parking_destinations: list[
+        dict[str, Any]
+    ],
+) -> dict[str, Any]:
+    """
+    Build approximate straight-line parking zones.
+
+    Worcester streets, restriction sides,
+    facility names, facility coordinates, and
+    distances come from real processed data.
+
+    Supply, demand, request counts, and street
+    chances are prototype estimates.
+    """
+
+    cleaned_radii = sorted(
+        set(radii_meters)
+    )
+
+    destination_items: list[
+        dict[str, Any]
+    ] = []
+
+    for destination in parking_destinations:
+        item = (
+            build_destination_distance_item(
+                destination=destination,
+                origin_latitude=latitude,
+                origin_longitude=longitude,
+            )
+        )
+
+        if item is not None:
+            destination_items.append(
+                item
+            )
+
+    destination_items.sort(
+        key=lambda item: (
+            item["distance_meters"],
+            item["name"],
+        )
+    )
+
+    zones: list[
+        dict[str, Any]
+    ] = []
+
+    for radius in cleaned_radii:
+        legal_streets = (
+            collect_unique_legal_streets(
+                latitude=latitude,
+                longitude=longitude,
+                radius_meters=radius,
+                parking_segments=(
+                    parking_segments
+                ),
+            )
+        )
+
+        garages_in_zone = [
+            destination
+            for destination
+            in destination_items
+            if float(
+                destination[
+                    "distance_meters"
+                ]
+            ) <= radius
+        ]
+
+        zones.append(
+            {
+                "radius_meters": radius,
+                "approximate_minutes": (
+                    approximate_minutes_from_distance(
+                        radius
+                    )
+                ),
+                "unique_legal_street_count": len(
+                    legal_streets
+                ),
+                "historical_garage_count": len(
+                    garages_in_zone
+                ),
+                "streets": legal_streets,
+                "garages": garages_in_zone,
+            }
+        )
+
+    nearest_historical_garage = (
+        destination_items[0]
+        if destination_items
+        else None
+    )
+
+    return {
+        "zone_method": (
+            "STRAIGHT_LINE_RADIUS"
+        ),
+        "origin": {
+            "latitude": latitude,
+            "longitude": longitude,
+            "segment_id": (
+                origin_segment_id
+            ),
+        },
+        "walking_speed_meters_per_minute": 80,
+        "zones": zones,
+        "nearest_historical_garage": (
+            nearest_historical_garage
+        ),
+        "disclosure": (
+            "Approximate straight-line zones "
+            "using real Worcester street and "
+            "parking-facility locations. Street "
+            "demand and chance values are prototype "
+            "estimates. These are not calculated "
+            "walking routes or live parking "
+            "availability."
+        ),
+    }
