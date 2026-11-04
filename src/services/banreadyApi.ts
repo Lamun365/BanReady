@@ -1,5 +1,5 @@
 // const API_BASE_URL = "https://banready.onrender.com";
-const API_BASE_URL = "http://192.168.0.104:8000";
+const API_BASE_URL = "https://authority-employed-alumni-pacific.trycloudflare.com";
 
 
 export type ParkingCheckRequest = {
