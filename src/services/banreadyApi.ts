@@ -1,5 +1,5 @@
-// const API_BASE_URL = "https://banready.onrender.com";
-const API_BASE_URL = "https://authority-employed-alumni-pacific.trycloudflare.com";
+const API_BASE_URL = "https://banready.onrender.com";
+// const API_BASE_URL = "https://authority-employed-alumni-pacific.trycloudflare.com";
 
 
 export type ParkingCheckRequest = {
