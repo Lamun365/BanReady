@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from backend.app.services.destination_engine import (
@@ -186,6 +187,16 @@ app = FastAPI(
         "parking destination search."
     ),
     version="0.4.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "*",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
