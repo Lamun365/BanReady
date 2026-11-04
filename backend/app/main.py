@@ -26,6 +26,19 @@ from backend.app.services.time_engine import (
     to_worcester_time,
 )
 
+from backend.app.models.prototype_analytics import (
+    ModeledStreetRequest,
+    ModeledWalkingZonesRequest,
+    ModeledZoneRequest,
+)
+
+from backend.app.services.prototype_analytics_engine import (
+    build_modeled_street_analytics,
+    build_modeled_walking_zones,
+    build_modeled_zone_analytics,
+)
+
+
 
 # ============================================================
 # Data locations
@@ -33,6 +46,10 @@ from backend.app.services.time_engine import (
 
 PARKING_FILE = Path(
     "data/processed/winter_parking_ban.geojson"
+)
+
+PARKING_DESTINATIONS_FILE = Path(
+    "data/processed/parking_destinations.json"
 )
 
 ADDRESS_FILE = Path(
@@ -88,6 +105,23 @@ PARKING_FEATURES = parking_data.get(
 if not PARKING_FEATURES:
     raise RuntimeError(
         "No Worcester parking-ban features were loaded."
+    )
+
+parking_destinations_data = load_json_file(
+    PARKING_DESTINATIONS_FILE
+)
+
+PARKING_DESTINATIONS = (
+    parking_destinations_data.get(
+        "destinations",
+        [],
+    )
+)
+
+if not PARKING_DESTINATIONS:
+    raise RuntimeError(
+        "No BanReady parking destinations "
+        "were loaded."
     )
 
 
@@ -223,6 +257,10 @@ def root():
             PARKING_FEATURES
         ),
 
+        "parking_destinations": len(
+            PARKING_DESTINATIONS
+        ),
+
         "parity_source": PARITY_SOURCE,
 
         "precomputed_parity_segments": len(
@@ -237,6 +275,9 @@ def root():
             "/health",
             "/parking/check",
             "/parking/options",
+            "/parking/modeled-street",
+            "/parking/modeled-zone",
+            "/parking/modeled-walking-zones"
         ],
     }
 
@@ -253,6 +294,10 @@ def health():
 
         "parking_segments": len(
             PARKING_FEATURES
+        ),
+
+        "parking_destinations": len(
+            PARKING_DESTINATIONS
         ),
 
         "parity_source": PARITY_SOURCE,
@@ -493,3 +538,117 @@ def parking_options(
     )
 
     return result.to_dict()
+
+@app.post("/parking/modeled-street")
+def modeled_street(
+    request: ModeledStreetRequest,
+):
+    """
+    Return location-responsive prototype analytics.
+
+    Street, side, ban type, and segment ID come
+    from BanReady's real parking-check result.
+
+    Supply, demand, request, and chance values are
+    deterministic synthetic prototype values.
+    """
+
+    return build_modeled_street_analytics(
+        street_name=request.street_name,
+        segment_id=request.segment_id,
+        parked_side=request.parked_side,
+        restricted_side=(
+            request.restricted_side
+        ),
+        ban_type=request.ban_type,
+    )
+
+# ============================================================
+# Modeled parking-zone analytics endpoint
+# ============================================================
+
+@app.post("/parking/modeled-zone")
+def modeled_zone(
+    request: ModeledZoneRequest,
+):
+    """
+    Return nearby Worcester streets with modeled
+    parking analytics.
+
+    Real data:
+    - Worcester street names
+    - segment IDs
+    - winter-ban types
+    - restricted sides
+    - straight-line distances
+
+    Prototype data:
+    - legal-space estimates
+    - expected vehicle counts
+    - request counts
+    - parking-chance percentages
+
+    This endpoint does not provide live parking
+    availability or calculated walking routes.
+    """
+
+    return build_modeled_zone_analytics(
+        latitude=request.latitude,
+        longitude=request.longitude,
+        origin_segment_id=(
+            request.origin_segment_id
+        ),
+        radius_meters=(
+            request.radius_meters
+        ),
+        limit=request.limit,
+        parking_segments=PARKING_FEATURES,
+    )
+
+# ============================================================
+# Approximate walking-zone analytics endpoint
+# ============================================================
+
+@app.post(
+    "/parking/modeled-walking-zones"
+)
+def modeled_walking_zones(
+    request: ModeledWalkingZonesRequest,
+):
+    """
+    Return approximate straight-line parking zones.
+
+    Real processed data:
+    - Worcester street geometry
+    - street names
+    - restriction sides
+    - parking-facility names
+    - parking-facility coordinates
+    - straight-line distances
+
+    Prototype data:
+    - legal-space estimates
+    - expected vehicle counts
+    - request counts
+    - parking-chance percentages
+
+    These zones are not calculated pedestrian
+    routes and do not show live availability.
+    """
+
+    return build_modeled_walking_zones(
+        latitude=request.latitude,
+        longitude=request.longitude,
+        origin_segment_id=(
+            request.origin_segment_id
+        ),
+        radii_meters=(
+            request.radii_meters
+        ),
+        parking_segments=(
+            PARKING_FEATURES
+        ),
+        parking_destinations=(
+            PARKING_DESTINATIONS
+        ),
+    )

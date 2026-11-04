@@ -15,6 +15,8 @@ import {
 } from "expo-router";
 
 import {
+    Dimensions,
+    FlatList,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -23,6 +25,12 @@ import {
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const SCREEN_WIDTH =
+  Dimensions.get("window").width;
+
+const OPTION_CARD_WIDTH =
+  SCREEN_WIDTH - 72;
 
 
 function getSingleParam(
@@ -63,25 +71,34 @@ function prettyDestinationType(
 function ParkingOptionCard({
   option,
   recommended,
+  index,
 }: {
   option: ParkingOption;
   recommended: boolean;
+  index: number;
 }) {
   return (
     <View
       style={[
         styles.optionCard,
-
-        recommended &&
-          styles.recommendedCard,
+        {
+          width: OPTION_CARD_WIDTH,
+        },
+        recommended
+          ? styles.recommendedCard
+          : null,
       ]}
     >
-      {recommended && (
+      {recommended ? (
         <View style={styles.recommendedBadge}>
-          <Text
-            style={styles.recommendedBadgeText}
-          >
+          <Text style={styles.recommendedBadgeText}>
             NEAREST VERIFIED OPTION
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.optionNumberBadge}>
+          <Text style={styles.optionNumberBadgeText}>
+            OPTION {index + 1}
           </Text>
         </View>
       )}
@@ -94,82 +111,72 @@ function ParkingOptionCard({
         </View>
 
         <View style={styles.optionHeading}>
-          <Text style={styles.optionName}>
+          <Text
+            style={styles.optionName}
+            numberOfLines={2}
+          >
             {option.name}
           </Text>
 
-          <Text style={styles.optionAddress}>
-            {option.address}
+          <Text
+            style={styles.optionAddress}
+            numberOfLines={1}
+          >
+            {option.address ??
+              "Address unavailable"}
           </Text>
         </View>
       </View>
 
       <View style={styles.optionDivider} />
 
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>
-          Type
-        </Text>
+      <View style={styles.compactDetails}>
+        <View style={styles.compactDetailItem}>
+          <Text style={styles.compactDetailLabel}>
+            Type
+          </Text>
 
-        <Text style={styles.detailValue}>
-          {prettyDestinationType(
-            option.destination_type
-          )}
-        </Text>
+          <Text
+            style={styles.compactDetailValue}
+            numberOfLines={1}
+          >
+            {prettyDestinationType(
+              option.destination_type
+            )}
+          </Text>
+        </View>
+
+        <View style={styles.compactDivider} />
+
+        <View style={styles.compactDetailItem}>
+          <Text style={styles.compactDetailLabel}>
+            Distance
+          </Text>
+
+          <Text style={styles.compactDistanceValue}>
+            {option.distance_km.toFixed(2)} km
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>
-          Straight-line distance
-        </Text>
+      <View style={styles.statusRow}>
+        <View style={styles.verifiedBadge}>
+          <Text style={styles.verifiedBadgeText}>
+            ✓ Verified
+          </Text>
+        </View>
 
-        <Text style={styles.distanceValue}>
-          {option.distance_km.toFixed(2)} km
-        </Text>
-      </View>
+        <View style={styles.confirmedBadge}>
+          <Text style={styles.confirmedBadgeText}>
+            Ban evidence
+          </Text>
+        </View>
 
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>
-          Verification
-        </Text>
-
-        <Text style={styles.verifiedValue}>
-          Verified
-        </Text>
-      </View>
-
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>
-          Winter-ban evidence
-        </Text>
-
-        <Text style={styles.verifiedValue}>
-          Confirmed
-        </Text>
-      </View>
-
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>
-          Live availability
-        </Text>
-
-        <Text style={styles.unknownValue}>
-          Unknown
-        </Text>
-      </View>
-
-      <View style={styles.optionDivider} />
-
-      <View style={styles.capacityNotice}>
-        <Text style={styles.capacityNoticeTitle}>
-          Capacity not available yet
-        </Text>
-
-        <Text style={styles.capacityNoticeText}>
-          BanReady has not yet verified live
-          occupancy or available space at this
-          facility.
-        </Text>
+        <View style={styles.unknownBadge}>
+          <Text style={styles.unknownBadgeText}>
+            Availability unknown
+          </Text>
+        </View>
       </View>
 
       {option.ban_availability_note ? (
@@ -178,7 +185,10 @@ function ParkingOptionCard({
             Winter-ban note
           </Text>
 
-          <Text style={styles.banNoticeText}>
+          <Text
+            style={styles.banNoticeText}
+            numberOfLines={3}
+          >
             {option.ban_availability_note}
           </Text>
         </View>
@@ -197,6 +207,11 @@ export default function ParkingScreen() {
 
     const [errorMessage, setErrorMessage] = useState("");
 
+    const [
+      activeOptionIndex,
+      setActiveOptionIndex,
+    ] = useState(0);
+
 
     const street = getSingleParam(
     params.street,
@@ -212,6 +227,27 @@ export default function ParkingScreen() {
     params.longitude,
     ""
     );
+
+    const segmentId = getSingleParam(
+      params.segmentId,
+      ""
+    );
+
+    const parkedSide = getSingleParam(
+      params.parkedSide,
+      "UNKNOWN"
+    );
+
+    const restrictedSide = getSingleParam(
+      params.restrictedSide,
+      "UNKNOWN"
+    );
+
+    const banType = getSingleParam(
+      params.banType,
+      "UNKNOWN"
+    );
+
 
     const originLatitude = Number(latitude);
 
@@ -250,6 +286,9 @@ export default function ParkingScreen() {
         setOptions(
             result.options
         );
+
+        setActiveOptionIndex(0);
+
         } catch (error) {
         if (error instanceof Error) {
             setErrorMessage(
@@ -335,6 +374,55 @@ export default function ParkingScreen() {
             )}
         </View>
 
+        {/* Main modeled analytics action */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.analyticsButton,
+
+            pressed
+              ? styles.analyticsButtonPressed
+              : null,
+          ]}
+          onPress={() => {
+            router.push({
+              pathname: "/street-chance",
+
+              params: {
+                streetName: street,
+                segmentId,
+                latitude,
+                longitude,
+                parkedSide,
+                restrictedSide,
+                banType,
+              },
+            });
+          }}
+        >
+          <View style={styles.analyticsButtonContent}>
+            <View style={styles.analyticsIcon}>
+              <Text style={styles.analyticsIconText}>
+                %
+              </Text>
+            </View>
+
+            <View style={styles.analyticsTextGroup}>
+              <Text style={styles.analyticsTitle}>
+                Explore Modeled Parking Chance
+              </Text>
+
+              <Text style={styles.analyticsSubtitle}>
+                Compare prototype parking estimates
+                across nearby streets
+              </Text>
+            </View>
+
+            <Text style={styles.analyticsArrow}>
+              ›
+            </Text>
+          </View>
+        </Pressable>
+
 
         {/* Important current limitation */}
 
@@ -344,16 +432,9 @@ export default function ParkingScreen() {
           </Text>
 
           <Text style={styles.infoText}>
-            These facilities are verified parking
-            candidates with historical Worcester
-            winter-ban evidence.
-          </Text>
-
-          <Text style={styles.infoText}>
-            BanReady does not yet know live space
-            availability or capacity. Distances shown
-            here are straight-line estimates, not
-            walking routes.
+            Verified Worcester winter-ban parking
+            candidates ranked by straight-line distance.
+            Live availability is unknown.
           </Text>
         </View>
 
@@ -412,18 +493,103 @@ export default function ParkingScreen() {
         )}
 
 
-        {options.map(
-        (option, index) => (
-            <ParkingOptionCard
-            key={option.parking_id}
-            option={option}
-            recommended={index === 0}
-            />
-        )
-        )}
+        {!isLoading &&
+          errorMessage === "" &&
+          options.length > 0 && (
+            <>
+              <FlatList
+                data={options}
+                horizontal
+                nestedScrollEnabled
+                showsHorizontalScrollIndicator={
+                  false
+                }
+                decelerationRate="fast"
+                snapToInterval={
+                  OPTION_CARD_WIDTH + 12
+                }
+                snapToAlignment="start"
+                disableIntervalMomentum
+                contentContainerStyle={
+                  styles.optionsCarousel
+                }
+                ItemSeparatorComponent={() => (
+                  <View
+                    style={
+                      styles.optionSeparator
+                    }
+                  />
+                )}
+                keyExtractor={(option) =>
+                  option.parking_id
+                }
+                renderItem={({
+                  item,
+                  index,
+                }) => (
+                  <ParkingOptionCard
+                    option={item}
+                    index={index}
+                    recommended={index === 0}
+                  />
+                )}
+                onMomentumScrollEnd={(
+                  event
+                ) => {
+                  const offset =
+                    event.nativeEvent
+                      .contentOffset.x;
 
+                  const interval =
+                    OPTION_CARD_WIDTH + 12;
 
+                  const newIndex = Math.round(
+                    offset / interval
+                  );
 
+                  setActiveOptionIndex(
+                    Math.max(
+                      0,
+                      Math.min(
+                        newIndex,
+                        options.length - 1
+                      )
+                    )
+                  );
+                }}
+              />
+
+              <View style={styles.carouselFooter}>
+                <Text style={styles.carouselCounter}>
+                  {activeOptionIndex + 1}
+                  {" of "}
+                  {options.length}
+                </Text>
+
+                <View style={styles.paginationDots}>
+                  {options.map(
+                    (option, index) => (
+                      <View
+                        key={option.parking_id}
+                        style={[
+                          styles.paginationDot,
+
+                          index ===
+                          activeOptionIndex
+                            ? styles.paginationDotActive
+                            : null,
+                        ]}
+                      />
+                    )
+                  )}
+                </View>
+
+                <Text style={styles.swipeHint}>
+                  Swipe for more parking options
+                </Text>
+              </View>
+            </>
+          )}
 
         {/* Return */}
 
@@ -547,28 +713,25 @@ const styles = StyleSheet.create({
 
 
     infoCard: {
-    backgroundColor: "#EFF8FF",
-    borderColor: "#B2DDFF",
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 22,
+      backgroundColor: "#EFF8FF",
+      borderColor: "#B2DDFF",
+      borderWidth: 1,
+      borderRadius: 16,
+      padding: 14,
+      marginBottom: 18,
     },
-
 
     infoTitle: {
-    color: "#175CD3",
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 7,
+      color: "#175CD3",
+      fontSize: 13,
+      fontWeight: "800",
+      marginBottom: 4,
     },
 
-
     infoText: {
-    color: "#344054",
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 4,
+      color: "#344054",
+      fontSize: 11,
+      lineHeight: 17,
     },
 
 
@@ -600,183 +763,195 @@ const styles = StyleSheet.create({
 
 
     optionCard: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#EAECF0",
-    borderWidth: 1,
-    borderRadius: 22,
-    padding: 20,
-    marginBottom: 14,
+      backgroundColor: "#FFFFFF",
+      borderColor: "#EAECF0",
+      borderWidth: 1,
+      borderRadius: 20,
+      padding: 16,
+      marginBottom: 2,
     },
-
 
     recommendedCard: {
-    borderColor: "#84ADFF",
-    borderWidth: 2,
+      borderColor: "#84ADFF",
+      borderWidth: 2,
     },
-
 
     recommendedBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#E8F1FF",
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 15,
+      alignSelf: "flex-start",
+      backgroundColor: "#E8F1FF",
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      marginBottom: 12,
     },
-
 
     recommendedBadgeText: {
-    color: "#175CD3",
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.6,
+      color: "#175CD3",
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 0.6,
     },
 
+    optionNumberBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: "#F2F4F7",
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      marginBottom: 12,
+    },
+
+    optionNumberBadgeText: {
+      color: "#475467",
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 0.6,
+    },
 
     optionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+      flexDirection: "row",
+      alignItems: "center",
     },
-
 
     parkingIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 13,
-    backgroundColor: "#1769E0",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 13,
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      backgroundColor: "#1769E0",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
     },
-
 
     parkingIconText: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "900",
+      color: "#FFFFFF",
+      fontSize: 21,
+      fontWeight: "900",
     },
-
 
     optionHeading: {
-    flex: 1,
+      flex: 1,
     },
-
 
     optionName: {
-    color: "#12223B",
-    fontSize: 18,
-    fontWeight: "800",
+      color: "#12223B",
+      fontSize: 17,
+      lineHeight: 21,
+      fontWeight: "800",
     },
-
 
     optionAddress: {
-    color: "#667085",
-    fontSize: 13,
-    marginTop: 4,
+      color: "#667085",
+      fontSize: 12,
+      marginTop: 3,
     },
-
 
     optionDivider: {
-    height: 1,
-    backgroundColor: "#EAECF0",
-    marginVertical: 16,
+      height: 1,
+      backgroundColor: "#EAECF0",
+      marginVertical: 13,
     },
 
-
-    detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-    gap: 18,
+    compactDetails: {
+      flexDirection: "row",
+      alignItems: "center",
     },
 
-
-    detailLabel: {
-    flex: 1,
-    color: "#667085",
-    fontSize: 13,
+    compactDetailItem: {
+      flex: 1,
     },
 
-
-    detailValue: {
-    flex: 1,
-    color: "#344054",
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "right",
+    compactDetailLabel: {
+      color: "#667085",
+      fontSize: 10,
+      fontWeight: "700",
     },
 
-
-    distanceValue: {
-    flex: 1,
-    color: "#175CD3",
-    fontSize: 14,
-    fontWeight: "800",
-    textAlign: "right",
+    compactDetailValue: {
+      color: "#344054",
+      fontSize: 12,
+      fontWeight: "800",
+      marginTop: 3,
     },
 
-
-    verifiedValue: {
-    flex: 1,
-    color: "#067647",
-    fontSize: 13,
-    fontWeight: "800",
-    textAlign: "right",
+    compactDistanceValue: {
+      color: "#175CD3",
+      fontSize: 14,
+      fontWeight: "900",
+      marginTop: 3,
     },
 
-
-    unknownValue: {
-    flex: 1,
-    color: "#B54708",
-    fontSize: 13,
-    fontWeight: "800",
-    textAlign: "right",
+    compactDivider: {
+      width: 1,
+      height: 36,
+      backgroundColor: "#EAECF0",
+      marginHorizontal: 14,
     },
 
-
-    capacityNotice: {
-    backgroundColor: "#FFFAEB",
-    borderRadius: 14,
-    padding: 14,
+    statusRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+      marginTop: 14,
     },
 
-
-    capacityNoticeTitle: {
-    color: "#93370D",
-    fontSize: 13,
-    fontWeight: "800",
+    verifiedBadge: {
+      backgroundColor: "#ECFDF3",
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
     },
 
-
-    capacityNoticeText: {
-    color: "#B54708",
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 5,
+    verifiedBadgeText: {
+      color: "#067647",
+      fontSize: 9,
+      fontWeight: "900",
     },
 
+    confirmedBadge: {
+      backgroundColor: "#EFF8FF",
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+    },
+
+    confirmedBadgeText: {
+      color: "#175CD3",
+      fontSize: 9,
+      fontWeight: "900",
+    },
+
+    unknownBadge: {
+      backgroundColor: "#FFFAEB",
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+    },
+
+    unknownBadgeText: {
+      color: "#B54708",
+      fontSize: 9,
+      fontWeight: "900",
+    },
 
     banNotice: {
-    backgroundColor: "#EFF8FF",
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 10,
+      backgroundColor: "#EFF8FF",
+      borderRadius: 13,
+      padding: 11,
+      marginTop: 13,
     },
-
 
     banNoticeTitle: {
-    color: "#175CD3",
-    fontSize: 13,
-    fontWeight: "800",
+      color: "#175CD3",
+      fontSize: 11,
+      fontWeight: "900",
     },
 
-
     banNoticeText: {
-    color: "#344054",
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 5,
+      color: "#344054",
+      fontSize: 10,
+      lineHeight: 15,
+      marginTop: 3,
     },
 
 
@@ -862,6 +1037,110 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     marginTop: 6,
+    },
+
+    analyticsButton: {
+      backgroundColor: "#10243F",
+      borderRadius: 18,
+      paddingVertical: 14,
+      paddingHorizontal: 15,
+      marginBottom: 14,
+    },
+
+    analyticsButtonPressed: {
+      opacity: 0.82,
+    },
+
+    analyticsButtonContent: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+
+    analyticsIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: "#2070C0",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    analyticsIconText: {
+      color: "#FFFFFF",
+      fontSize: 19,
+      fontWeight: "900",
+    },
+
+    analyticsTextGroup: {
+      flex: 1,
+      marginLeft: 12,
+      paddingRight: 7,
+    },
+
+    analyticsTitle: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      lineHeight: 18,
+      fontWeight: "900",
+    },
+
+    analyticsSubtitle: {
+      color: "#D0D5DD",
+      fontSize: 10,
+      lineHeight: 14,
+      marginTop: 3,
+    },
+
+    analyticsArrow: {
+      color: "#FFFFFF",
+      fontSize: 27,
+      fontWeight: "500",
+    },
+
+    optionsCarousel: {
+      paddingRight: 24,
+    },
+
+    optionSeparator: {
+      width: 12,
+    },
+
+    carouselFooter: {
+      alignItems: "center",
+      marginTop: 13,
+      marginBottom: 5,
+    },
+
+    carouselCounter: {
+      color: "#344054",
+      fontSize: 13,
+      fontWeight: "800",
+    },
+
+    paginationDots: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 9,
+    },
+
+    paginationDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: "#D0D5DD",
+      marginHorizontal: 4,
+    },
+
+    paginationDotActive: {
+      width: 21,
+      backgroundColor: "#2070C0",
+    },
+
+    swipeHint: {
+      color: "#98A2B3",
+      fontSize: 11,
+      marginTop: 8,
     },
 
 });

@@ -8,9 +8,13 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 
 import { useColorScheme } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+} from "react-native-safe-area-context";
 
-import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import {
+  AnimatedSplashOverlay,
+} from "@/components/animated-icon";
 
 
 SplashScreen.preventAutoHideAsync();
@@ -42,7 +46,18 @@ export default function RootLayout() {
           <Stack.Screen name="status" />
 
           <Stack.Screen name="parking" />
-          
+
+          <Stack.Screen
+            name="street-chance"
+          />
+
+          <Stack.Screen
+            name="parking-zone"
+          />
+
+          <Stack.Screen
+            name="walking-zones"
+          />
         </Stack>
       </ThemeProvider>
     </SafeAreaProvider>

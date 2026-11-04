@@ -110,6 +110,11 @@ export default function StatusScreen() {
     "Unknown street"
   );
 
+  const segmentId = getSingleParam(
+  params.segmentId,
+  ""
+);
+
   const parkedSide = getSingleParam(
     params.parkedSide,
     "UNSURE"
@@ -342,9 +347,13 @@ export default function StatusScreen() {
                 pathname: "/parking",
 
                 params: {
-                  street: street,
-                  latitude: latitude,
-                  longitude: longitude,
+                  street,
+                  segmentId,
+                  latitude,
+                  longitude,
+                  parkedSide,
+                  restrictedSide,
+                  banType,
                 },
               });
             }}
