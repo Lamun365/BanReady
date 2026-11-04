@@ -213,6 +213,27 @@ export default function ParkingScreen() {
     ""
     );
 
+    const segmentId = getSingleParam(
+      params.segmentId,
+      ""
+    );
+
+    const parkedSide = getSingleParam(
+      params.parkedSide,
+      "UNKNOWN"
+    );
+
+    const restrictedSide = getSingleParam(
+      params.restrictedSide,
+      "UNKNOWN"
+    );
+
+    const banType = getSingleParam(
+      params.banType,
+      "UNKNOWN"
+    );
+
+
     const originLatitude = Number(latitude);
 
     const originLongitude = Number(longitude);
@@ -426,6 +447,54 @@ export default function ParkingScreen() {
 
 
         {/* Return */}
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.analyticsButton,
+
+            pressed
+              ? styles.analyticsButtonPressed
+              : null,
+          ]}
+          onPress={() => {
+            router.push({
+              pathname: "/street-chance",
+
+              params: {
+                streetName: street,
+                segmentId,
+                latitude,
+                longitude,
+                parkedSide,
+                restrictedSide,
+                banType,
+              },
+            });
+          }}
+        >
+          <View style={styles.analyticsButtonContent}>
+            <View style={styles.analyticsIcon}>
+              <Text style={styles.analyticsIconText}>
+                %
+              </Text>
+            </View>
+
+            <View style={styles.analyticsTextGroup}>
+              <Text style={styles.analyticsTitle}>
+                Explore Modeled Parking Chance
+              </Text>
+
+              <Text style={styles.analyticsSubtitle}>
+                Compare prototype parking estimates
+                across nearby streets
+              </Text>
+            </View>
+
+            <Text style={styles.analyticsArrow}>
+              ›
+            </Text>
+          </View>
+        </Pressable>
 
         <Pressable
           style={styles.secondaryButton}
@@ -862,6 +931,63 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     marginTop: 6,
+    },
+
+    analyticsButton: {
+      backgroundColor: "#10243F",
+      borderRadius: 18,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      marginTop: 16,
+    },
+
+    analyticsButtonPressed: {
+      opacity: 0.82,
+    },
+
+    analyticsButtonContent: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+
+    analyticsIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 13,
+      backgroundColor: "#2070C0",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    analyticsIconText: {
+      color: "#FFFFFF",
+      fontSize: 21,
+      fontWeight: "900",
+    },
+
+    analyticsTextGroup: {
+      flex: 1,
+      marginLeft: 13,
+      paddingRight: 8,
+    },
+
+    analyticsTitle: {
+      color: "#FFFFFF",
+      fontSize: 15,
+      fontWeight: "900",
+    },
+
+    analyticsSubtitle: {
+      color: "#D0D5DD",
+      fontSize: 11,
+      lineHeight: 16,
+      marginTop: 4,
+    },
+
+    analyticsArrow: {
+      color: "#FFFFFF",
+      fontSize: 29,
+      fontWeight: "500",
     },
 
 });

@@ -188,6 +188,10 @@ export default function LocationScreen() {
             result.street_name ||
             street,
 
+          segmentId:
+            result.segment_id?.toString()
+            ?? "",
+
           latitude: latitude,
           longitude: longitude,
 

@@ -55,9 +55,9 @@ export default function RootLayout() {
             name="parking-zone"
           />
 
-          {/* <Stack.Screen
+          <Stack.Screen
             name="walking-zones"
-          /> */}
+          />
         </Stack>
       </ThemeProvider>
     </SafeAreaProvider>
